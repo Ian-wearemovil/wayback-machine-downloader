@@ -6,16 +6,19 @@ import re
 import signal
 import subprocess
 import threading
+import webbrowser
 from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk, Gio, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk, Pango
 
 from gui.command import download_command
-from gui.url_normalize import UrlError, destination_directory, normalize_site_url
+from gui.library import library_file, load_records, remember_download, save_records, visible_sites
+from gui.preview import PreviewServer
+from gui.url_normalize import UrlError, destination_directory, normalize_site_url, site_folder_name
 
 APP_ID = "org.hartator.WaybackMachineDownloader"
 _PROGRESS = re.compile(r"\((\d+)/(\d+)\)")
@@ -24,13 +27,17 @@ _PROGRESS = re.compile(r"\((\d+)/(\d+)\)")
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, application):
         super().__init__(application=application, title="Wayback Machine Downloader")
-        self.set_default_size(720, 560)
+        self.set_default_size(720, 700)
         self._job = None
         self._pulse_id = 0
         self._kill_id = 0
         self._pending = ""
         self._outcome = None
         self._user_stopped = False
+        self._active_site = None
+        self._active_destination = None
+        self._preview = PreviewServer()
+        self.site_list = None
 
         header = Gtk.HeaderBar()
         self.set_titlebar(header)
@@ -60,7 +67,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.folder_entry = Gtk.Entry()
         self.folder_entry.set_hexpand(True)
         self.folder_entry.set_text(_default_folder())
-        self.folder_entry.connect("changed", self._on_url_changed)
+        self.folder_entry.connect("changed", self._on_folder_changed)
         folder_label.set_mnemonic_widget(self.folder_entry)
         browse = Gtk.Button(label="_Browse")
         browse.set_use_underline(True)
@@ -92,7 +99,20 @@ class MainWindow(Gtk.ApplicationWindow):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_vexpand(True)
+        scrolled.set_min_content_height(120)
         scrolled.set_child(self.log)
+
+        sites_label = Gtk.Label(label="Downloaded websites", xalign=0)
+        sites_label.add_css_class("heading")
+        self.site_list = Gtk.ListBox()
+        self.site_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        sites_scroll = Gtk.ScrolledWindow()
+        sites_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sites_scroll.set_vexpand(True)
+        sites_scroll.set_min_content_height(140)
+        sites_scroll.set_child(self.site_list)
+        self.preview_status = Gtk.Label(xalign=0, wrap=True)
+        self.preview_status.add_css_class("dim-label")
 
         for child in (
             url_label,
@@ -101,15 +121,23 @@ class MainWindow(Gtk.ApplicationWindow):
             folder_label,
             folder_row,
             action_row,
+            sites_label,
+            sites_scroll,
+            self.preview_status,
             scrolled,
         ):
             root.append(child)
 
         self.connect("close-request", self._on_close_request)
         self._refresh_hint()
+        self._refresh_sites()
 
     def _on_url_changed(self, *_args):
         self._refresh_hint()
+
+    def _on_folder_changed(self, *_args):
+        self._refresh_hint()
+        self._refresh_sites()
 
     def _refresh_hint(self):
         try:
@@ -165,6 +193,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self._user_stopped = False
         self._outcome = None
         self._pending = ""
+        self._active_site = site
+        self._active_destination = destination_directory(folder, site)
         self.log.get_buffer().set_text("")
         self.progress.set_fraction(0)
         self.progress.set_text("Looking up snapshots…")
@@ -250,8 +280,83 @@ class MainWindow(Gtk.ApplicationWindow):
             self.progress.set_text("Finished")
         else:
             self.progress.set_text("Download failed")
+        if code == 0 and self._outcome != "empty" and self._active_destination is not None:
+            self._remember_finished_download()
         self._set_running(False)
         return False
+
+    def _remember_finished_download(self):
+        folder = self._active_destination
+        if folder is None or not (folder / "index.html").is_file():
+            return
+        path = library_file()
+        records = remember_download(
+            load_records(path),
+            site_folder_name(self._active_site),
+            self._active_site,
+            folder,
+        )
+        save_records(path, records)
+        self._refresh_sites()
+
+    def _refresh_sites(self):
+        if self.site_list is None:
+            return
+        while (child := self.site_list.get_first_child()) is not None:
+            self.site_list.remove(child)
+        sites = visible_sites(load_records(library_file()), self._folder_path())
+        if not sites:
+            self.site_list.append(self._message_row("Websites you download appear here."))
+            return
+        for site in sites:
+            self.site_list.append(self._site_row(site))
+
+    def _message_row(self, text):
+        row = Gtk.ListBoxRow()
+        row.set_activatable(False)
+        row.set_selectable(False)
+        label = Gtk.Label(label=text, xalign=0)
+        label.set_margin_top(8)
+        label.set_margin_bottom(8)
+        label.set_margin_start(8)
+        label.set_margin_end(8)
+        label.add_css_class("dim-label")
+        row.set_child(label)
+        return row
+
+    def _site_row(self, site):
+        row = Gtk.ListBoxRow()
+        row.set_activatable(False)
+        row.set_selectable(False)
+        box = Gtk.Box(spacing=12)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
+        box.set_margin_start(8)
+        box.set_margin_end(8)
+        text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        text.set_hexpand(True)
+        title = Gtk.Label(label=site["name"], xalign=0)
+        path = Gtk.Label(label=site["path"], xalign=0)
+        path.add_css_class("dim-label")
+        path.set_ellipsize(Pango.EllipsizeMode.START)
+        path.set_max_width_chars(48)
+        text.append(title)
+        text.append(path)
+        button = Gtk.Button(label="Live view")
+        button.connect("clicked", self._on_live_view, site["path"])
+        box.append(text)
+        box.append(button)
+        row.set_child(box)
+        return row
+
+    def _on_live_view(self, _button, folder):
+        try:
+            url = self._preview.serve(folder)
+        except OSError as exc:
+            self._alert("Could not open the site", str(exc))
+            return
+        self.preview_status.set_text(f"Live view at {url}")
+        webbrowser.open(url)
 
     def _set_running(self, running):
         if running:
@@ -284,6 +389,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if self._job is not None:
             self._user_stopped = True
             self._job.kill()
+        self._preview.stop()
         return False
 
 

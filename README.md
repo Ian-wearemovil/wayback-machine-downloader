@@ -177,7 +177,7 @@ Example:
 
 ## Desktop app
 
-A GTK window downloads an entire archived site. Paste a website URL or a link copied from the Wayback Machine, choose a folder, and start the download. The site is saved in a folder named after the domain, such as `Downloads/arcgps.com`. The launcher appears in the app grid.
+A GTK window downloads an entire archived site. Paste a website URL or a link copied from the Wayback Machine, choose a folder, and start the download. The site is saved in a folder named after the domain, such as `Downloads/arcgps.com`. Downloaded sites are listed in the window, and Live view opens one on localhost in your browser. The launcher appears in the app grid.
 
 On CachyOS:
 
