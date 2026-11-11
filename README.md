@@ -175,6 +175,17 @@ Example:
 
     wayback_machine_downloader http://example.com --concurrency 20
 
+## Desktop app
+
+A GTK window downloads an entire archived site. Paste a website URL or a link copied from the Wayback Machine, choose a folder, and start the download. The launcher appears in the app grid.
+
+On CachyOS:
+
+    sudo pacman -S ruby gtk4 python-gobject
+    ./scripts/install-desktop.sh
+
+Then open Wayback Machine Downloader from the app grid.
+
 ## Using the Docker image
 
 As an alternative installation way, we have a Docker image! Retrieve the wayback-machine-downloader Docker image this way:

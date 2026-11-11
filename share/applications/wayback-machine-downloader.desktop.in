@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Wayback Machine Downloader
+GenericName=Website Archiver
+Comment=Download an archived website from the Wayback Machine
+Exec=@EXEC@
+Icon=@ICON@
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=wayback;archive;download;website;
+StartupWMClass=org.hartator.WaybackMachineDownloader
