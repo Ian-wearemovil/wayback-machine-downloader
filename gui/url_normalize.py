@@ -1,5 +1,6 @@
 """Turn a pasted site or Wayback Machine link into the site the CLI downloads."""
 
+from pathlib import Path
 from urllib.parse import urlparse
 
 WAYBACK_HOSTS = frozenset(
@@ -80,3 +81,16 @@ def _origin(parsed, host):
     else:
         netloc = host
     return f"{parsed.scheme}://{netloc}"
+
+
+def site_folder_name(site_url):
+    """Directory name for a normalized site URL, such as ``arcgps.com``."""
+    name = urlparse(site_url).netloc
+    if not name:
+        raise UrlError("Enter an http or https website URL.")
+    return name
+
+
+def destination_directory(parent, site_url):
+    """Return ``parent/arcgps.com`` for a site URL and a chosen parent folder."""
+    return Path(parent) / site_folder_name(site_url)

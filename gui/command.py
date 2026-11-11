@@ -3,6 +3,8 @@
 import shutil
 from pathlib import Path
 
+from gui.url_normalize import destination_directory
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOWNLOADER_SCRIPT = REPO_ROOT / "bin" / "wayback_machine_downloader"
 
@@ -28,5 +30,7 @@ def ruby_command(args):
     ]
 
 
-def download_command(site_url, directory):
+def download_command(site_url, parent_directory):
+    """Download the site into a folder named after its domain."""
+    directory = destination_directory(parent_directory, site_url)
     return ruby_command([site_url, "--directory", str(directory)])

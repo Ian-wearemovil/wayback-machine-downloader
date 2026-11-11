@@ -11,7 +11,10 @@ class RubyCommandTest(unittest.TestCase):
         self.assertEqual(argv[1], "-e")
         self.assertIn("STDOUT.sync=true", argv[2])
         self.assertEqual(argv[3], str(DOWNLOADER_SCRIPT))
-        self.assertEqual(argv[4:], ["http://example.com", "--directory", "/tmp/archived-site"])
+        self.assertEqual(
+            argv[4:],
+            ["http://example.com", "--directory", "/tmp/archived-site/example.com"],
+        )
 
     def test_version_command_runs_the_downloader(self):
         completed = subprocess.run(

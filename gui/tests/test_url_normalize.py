@@ -1,6 +1,8 @@
 import unittest
 
-from gui.url_normalize import UrlError, normalize_site_url
+from pathlib import Path
+
+from gui.url_normalize import UrlError, destination_directory, normalize_site_url, site_folder_name
 
 
 class NormalizeSiteUrlTest(unittest.TestCase):
@@ -53,6 +55,19 @@ class NormalizeSiteUrlTest(unittest.TestCase):
     def test_unsupported_scheme(self):
         with self.assertRaises(UrlError):
             normalize_site_url("ftp://example.com")
+
+    def test_site_folder_uses_the_domain(self):
+        self.assertEqual(site_folder_name("http://arcgps.com"), "arcgps.com")
+
+    def test_site_folder_keeps_a_nondefault_port(self):
+        self.assertEqual(site_folder_name("http://example.com:8080"), "example.com:8080")
+
+    def test_destination_is_a_domain_folder_inside_the_chosen_directory(self):
+        chosen = Path("/home/ian/Downloads")
+        self.assertEqual(
+            destination_directory(chosen, "http://arcgps.com"),
+            chosen / "arcgps.com",
+        )
 
 
 if __name__ == "__main__":

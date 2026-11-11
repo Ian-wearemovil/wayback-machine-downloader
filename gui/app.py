@@ -15,7 +15,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk
 
 from gui.command import download_command
-from gui.url_normalize import UrlError, normalize_site_url
+from gui.url_normalize import UrlError, destination_directory, normalize_site_url
 
 APP_ID = "org.hartator.WaybackMachineDownloader"
 _PROGRESS = re.compile(r"\((\d+)/(\d+)\)")
@@ -60,6 +60,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.folder_entry = Gtk.Entry()
         self.folder_entry.set_hexpand(True)
         self.folder_entry.set_text(_default_folder())
+        self.folder_entry.connect("changed", self._on_url_changed)
         folder_label.set_mnemonic_widget(self.folder_entry)
         browse = Gtk.Button(label="_Browse")
         browse.set_use_underline(True)
@@ -117,7 +118,8 @@ class MainWindow(Gtk.ApplicationWindow):
             self.hint.set_text(str(exc))
             self.hint.remove_css_class("success")
             return None
-        self.hint.set_text(f"Downloads the archived site {site}")
+        destination = destination_directory(self._folder_path(), site)
+        self.hint.set_text(f"Saves files in {destination}")
         return site
 
     def _on_browse(self, _button):
