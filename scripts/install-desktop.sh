@@ -11,7 +11,9 @@ ICON_DIR="${DATA_HOME}/icons/hicolor/scalable/apps"
 mkdir -p "$APP_DIR" "$ICON_DIR"
 cp "${ROOT}/share/icons/hicolor/scalable/apps/wayback-machine-downloader.svg" \
   "${ICON_DIR}/wayback-machine-downloader.svg"
-chmod +x "${ROOT}/bin/wayback-downloader-gui"
+if [[ -f "${ROOT}/bin/wayback-downloader-gui" ]]; then
+  chmod +x "${ROOT}/bin/wayback-downloader-gui"
+fi
 
 python3 - << 'PY'
 import os
@@ -20,8 +22,7 @@ from pathlib import Path
 root = Path(os.environ["ROOT"])
 data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
 template = (root / "share/applications/wayback-machine-downloader.desktop.in").read_text()
-exec_path = str(root / "bin" / "wayback-downloader-gui").replace("\\", "\\\\").replace('"', '\\"')
-desktop = template.replace("@EXEC@", f'"{exec_path}"')
+desktop = template.replace("@ROOT@", str(root))
 desktop = desktop.replace(
     "@ICON@",
     str(root / "share/icons/hicolor/scalable/apps/wayback-machine-downloader.svg"),
