@@ -2,7 +2,15 @@ import unittest
 
 from pathlib import Path
 
-from gui.url_normalize import UrlError, destination_directory, normalize_site_url, site_folder_name
+from gui.url_normalize import (
+    UrlError,
+    destination_directory,
+    format_snapshot,
+    normalize_site_url,
+    site_folder_name,
+    snapshot_page_url,
+    snapshot_timestamp,
+)
 
 
 class NormalizeSiteUrlTest(unittest.TestCase):
@@ -21,6 +29,19 @@ class NormalizeSiteUrlTest(unittest.TestCase):
     def test_wayback_timestamp_link(self):
         pasted = "https://web.archive.org/web/20100916231334/http://example.com/index.html"
         self.assertEqual(normalize_site_url(pasted), "http://example.com")
+        self.assertEqual(snapshot_timestamp(pasted), "20100916231334")
+        self.assertEqual(format_snapshot("20190719091311"), "July 19, 2019")
+
+    def test_plain_url_has_no_snapshot_time(self):
+        self.assertIsNone(snapshot_timestamp("http://example.com"))
+
+    def test_wayback_identity_timestamp_and_page_url(self):
+        pasted = "https://web.archive.org/web/20190719091311id_/http://www.cactuscruisers.org/"
+        self.assertEqual(snapshot_timestamp(pasted), "20190719091311")
+        self.assertEqual(
+            snapshot_page_url(pasted),
+            "https://web.archive.org/web/20190719091311id_/http://www.cactuscruisers.org/",
+        )
 
     def test_wayback_identity_link_and_https_origin(self):
         pasted = "https://web.archive.org/web/20201101000000id_/https://example.com/a/b"

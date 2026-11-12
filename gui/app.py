@@ -18,7 +18,15 @@ from gi.repository import Gdk, Gio, GLib, Gtk, Pango
 from gui.command import download_command
 from gui.library import library_file, load_records, remember_download, save_records, visible_sites
 from gui.preview import PreviewServer
-from gui.url_normalize import UrlError, destination_directory, normalize_site_url, site_folder_name
+from gui.snapshot import fetch_snapshot_html, resolve_download
+from gui.url_normalize import (
+    UrlError,
+    destination_directory,
+    format_snapshot,
+    normalize_site_url,
+    site_folder_name,
+    snapshot_timestamp,
+)
 
 APP_ID = "org.hartator.WaybackMachineDownloader"
 _PROGRESS = re.compile(r"\((\d+)/(\d+)\)")
@@ -36,6 +44,8 @@ class MainWindow(Gtk.ApplicationWindow):
         self._user_stopped = False
         self._active_site = None
         self._active_destination = None
+        self._resolving = False
+        self._resolve_token = None
         self._preview = PreviewServer()
         self.site_list = None
 
@@ -147,7 +157,13 @@ class MainWindow(Gtk.ApplicationWindow):
             self.hint.remove_css_class("success")
             return None
         destination = destination_directory(self._folder_path(), site)
-        self.hint.set_text(f"Saves files in {destination}")
+        timestamp = snapshot_timestamp(self.url_entry.get_text())
+        if timestamp:
+            self.hint.set_text(
+                f"Saves the {format_snapshot(timestamp)} snapshot in {destination}"
+            )
+        else:
+            self.hint.set_text(f"Saves files in {destination}")
         return site
 
     def _on_browse(self, _button):
@@ -169,7 +185,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.folder_entry.set_text(folder.get_path())
 
     def _on_primary_clicked(self, _button):
-        if self._job is not None:
+        if self._job is not None or self._resolving:
             self._stop_download()
         else:
             self._start_download()
@@ -184,29 +200,71 @@ class MainWindow(Gtk.ApplicationWindow):
         if not parent.is_dir() or not os.access(parent, os.W_OK):
             self._alert("Check the folder", f"Cannot save files in {folder}")
             return
-        try:
-            argv = download_command(site, folder)
-        except RuntimeError as exc:
-            self._alert("Ruby is required", str(exc))
-            return
-
         self._user_stopped = False
         self._outcome = None
         self._pending = ""
-        self._active_site = site
-        self._active_destination = destination_directory(folder, site)
         self.log.get_buffer().set_text("")
         self.progress.set_fraction(0)
-        self.progress.set_text("Looking up snapshots…")
+        self.progress.set_text("Checking the snapshot…")
+        self._resolving = True
+        self._resolve_token = object()
         self._set_running(True)
         self._pulse_id = GLib.timeout_add(120, self._pulse)
+        threading.Thread(
+            target=self._resolve_then_launch,
+            args=(self.url_entry.get_text(), folder, self._resolve_token),
+            daemon=True,
+        ).start()
+
+    def _resolve_then_launch(self, raw, folder, token):
+        try:
+            site, timestamp = resolve_download(raw, fetch=fetch_snapshot_html)
+            error = None
+        except (UrlError, RuntimeError) as exc:
+            site, timestamp, error = None, None, str(exc)
+        GLib.idle_add(self._launch_resolved, site, timestamp, folder, token, error)
+
+    def _launch_resolved(self, site, timestamp, folder, token, error):
+        if token is not self._resolve_token:
+            return False
+        self._resolving = False
+        if self._user_stopped:
+            return False
+        if error or not site:
+            self._set_running(False)
+            self.progress.set_text("")
+            self._alert("Check the URL", error or "Enter an http or https website URL.")
+            return False
+        try:
+            argv = download_command(site, folder, to_timestamp=timestamp)
+        except RuntimeError as exc:
+            self._set_running(False)
+            self.progress.set_text("")
+            self._alert("Ruby is required", str(exc))
+            return False
+        destination = destination_directory(folder, site)
+        self._active_site = site
+        self._active_destination = destination
+        if timestamp:
+            self.hint.set_text(
+                f"Saves the {format_snapshot(timestamp)} snapshot in {destination}"
+            )
+        self.progress.set_text("Looking up snapshots…")
         self._job = _DownloadJob(argv, self._on_output, self._on_exit)
+        return False
 
     def _stop_download(self):
+        self._user_stopped = True
+        self._resolve_token = None
         job = self._job
         if job is None:
+            self._resolving = False
+            if self._pulse_id:
+                GLib.source_remove(self._pulse_id)
+                self._pulse_id = 0
+            self.progress.set_text("Stopped")
+            self._set_running(False)
             return
-        self._user_stopped = True
         self.progress.set_text("Stopping…")
         job.terminate()
         if self._kill_id:
@@ -220,7 +278,7 @@ class MainWindow(Gtk.ApplicationWindow):
         return False
 
     def _pulse(self):
-        if self._job is None or self._outcome == "files":
+        if self._outcome == "files" or (self._job is None and not self._resolving):
             self._pulse_id = 0
             return False
         self.progress.pulse()

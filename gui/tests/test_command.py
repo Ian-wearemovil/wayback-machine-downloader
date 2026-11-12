@@ -13,7 +13,24 @@ class RubyCommandTest(unittest.TestCase):
         self.assertEqual(argv[3], str(DOWNLOADER_SCRIPT))
         self.assertEqual(
             argv[4:],
-            ["http://example.com", "--directory", "/tmp/archived-site/example.com"],
+            ["--directory", "/tmp/archived-site/example.com", "http://example.com"],
+        )
+
+    def test_dated_archive_link_stops_at_that_snapshot(self):
+        argv = download_command(
+            "http://cactuscruisersamc.org",
+            Path("/tmp/archived-site"),
+            to_timestamp="20190719091311",
+        )
+        self.assertEqual(
+            argv[4:],
+            [
+                "--directory",
+                "/tmp/archived-site/cactuscruisersamc.org",
+                "--to",
+                "20190719091311",
+                "http://cactuscruisersamc.org",
+            ],
         )
 
     def test_version_command_runs_the_downloader(self):

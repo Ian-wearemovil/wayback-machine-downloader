@@ -47,7 +47,57 @@ def _hostname(parsed):
     return host
 
 
-def _original_from_wayback(parsed):
+def snapshot_timestamp(raw):
+    """Return the Wayback timestamp from a pasted link, or None.
+
+    ``https://web.archive.org/web/20190719091311/http://www.cactuscruisers.org/``
+    returns ``20190719091311``. A plain site URL has no snapshot time.
+    """
+    text = (raw or "").strip()
+    if "://" not in text:
+        text = "http://" + text
+    parsed = urlparse(text)
+    if _hostname(parsed) not in WAYBACK_HOSTS:
+        return None
+    _original, timestamp = _wayback_target(parsed)
+    return timestamp
+
+
+def format_snapshot(timestamp):
+    """Return a readable date for a Wayback timestamp, such as ``July 19, 2019``."""
+    months = (
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    )
+    if len(timestamp) >= 8 and timestamp[:8].isdigit():
+        year, month, day = int(timestamp[:4]), int(timestamp[4:6]), int(timestamp[6:8])
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            return f"{months[month - 1]} {day}, {year}"
+    if len(timestamp) >= 6 and timestamp[:6].isdigit():
+        year, month = int(timestamp[:4]), int(timestamp[4:6])
+        if 1 <= month <= 12:
+            return f"{months[month - 1]} {year}"
+    if len(timestamp) >= 4 and timestamp[:4].isdigit():
+        return timestamp[:4]
+    return timestamp
+
+
+def snapshot_page_url(raw):
+    """Return the original-content URL for a timestamped Wayback link."""
+    text = (raw or "").strip()
+    if "://" not in text:
+        text = "http://" + text
+    parsed = urlparse(text)
+    if _hostname(parsed) not in WAYBACK_HOSTS:
+        return None
+    original, timestamp = _wayback_target(parsed)
+    if not original or not timestamp:
+        return None
+    return f"https://web.archive.org/web/{timestamp}id_/{original}"
+
+
+def _wayback_target(parsed):
+    """Return ``(original_url, timestamp_or_none)`` from a Wayback path."""
     path = parsed.path or ""
     prefix = "/web/"
     if not path.startswith(prefix):
@@ -58,16 +108,23 @@ def _original_from_wayback(parsed):
     timestamp = head[:-3] if head.endswith("id_") else head
     if sep and (timestamp.isdigit() or head == "*"):
         original = tail
+        stamp = timestamp if timestamp.isdigit() else None
     elif rest.startswith("http://") or rest.startswith("https://"):
         original = rest
+        stamp = None
     else:
         raise UrlError("That Wayback link does not include a website.")
 
-    if original.startswith("http://") or original.startswith("https://"):
-        return original
     if original.startswith("//"):
-        return "http:" + original
-    return "http://" + original
+        original = "http:" + original
+    elif not original.startswith("http://") and not original.startswith("https://"):
+        original = "http://" + original
+    return original, stamp
+
+
+def _original_from_wayback(parsed):
+    original, _timestamp = _wayback_target(parsed)
+    return original
 
 
 def _origin(parsed, host):

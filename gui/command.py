@@ -30,7 +30,15 @@ def ruby_command(args):
     ]
 
 
-def download_command(site_url, parent_directory):
-    """Download the site into a folder named after its domain."""
+def download_command(site_url, parent_directory, to_timestamp=None):
+    """Download the site into a folder named after its domain.
+
+    ``to_timestamp`` keeps the newest file archived on or before that
+    Wayback time, so a dated archive link does not save later copies.
+    """
     directory = destination_directory(parent_directory, site_url)
-    return ruby_command([site_url, "--directory", str(directory)])
+    args = ["--directory", str(directory)]
+    if to_timestamp:
+        args.extend(["--to", str(to_timestamp)])
+    args.append(site_url)
+    return ruby_command(args)
