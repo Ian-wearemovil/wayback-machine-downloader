@@ -81,20 +81,26 @@ class WaybackMachineDownloader
   end
 
   def get_all_snapshots_to_consider
-    # Note: Passing a page index parameter allow us to get more snapshots,
-    # but from a less fresh index
+    # The paged CDX index has gaps: a later page can contain files even
+    # when an earlier page is empty. Stopping at the first empty page
+    # leaves only the homepage.
     http = Net::HTTP.new("web.archive.org", 443)
     http.use_ssl = true
+    http.open_timeout = 30
+    http.read_timeout = 120
     http.start()
     print "Getting snapshot pages"
     snapshot_list_to_consider = []
-    snapshot_list_to_consider += get_raw_list_from_api(@base_url, nil, http)
+    snapshot_list_to_consider += fetch_snapshot_page(@base_url, nil, http)
     print "."
     unless @exact_url
-      @maximum_pages.times do |page_index|
-        snapshot_list = get_raw_list_from_api(@base_url + '/*', page_index, http)
-        break if snapshot_list.empty?
-        snapshot_list_to_consider += snapshot_list
+      wildcard = @base_url + '/*'
+      snapshot_list_to_consider += fetch_snapshot_page(wildcard, nil, http)
+      print "."
+      pages = num_snapshot_pages(wildcard, http)
+      page_count = pages && pages > 0 ? [pages, @maximum_pages].min : 0
+      page_count.times do |page_index|
+        snapshot_list_to_consider += fetch_snapshot_page(wildcard, page_index, http)
         print "."
       end
     end
