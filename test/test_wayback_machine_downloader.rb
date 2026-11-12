@@ -122,4 +122,35 @@ class WaybackMachineDownloaderTest < Minitest::Test
     @wayback_machine_downloader.download_files
   end
 
+  def test_empty_snapshot_page_does_not_end_the_list
+    downloader = WaybackMachineDownloader.new(base_url: 'http://example.com', maximum_pages: 4)
+    pages = {
+      ['http://example.com', nil] => [['19990101000000', 'http://example.com/']],
+      ['http://example.com/*', nil] => [['19990101000000', 'http://example.com/about.html']],
+      ['http://example.com/*', 0] => [['19990101000000', 'http://example.com/']],
+      ['http://example.com/*', 1] => [],
+      ['http://example.com/*', 2] => [['19990101000000', 'http://example.com/style.css']],
+      ['http://example.com/*', 3] => [['19990101000000', 'http://example.com/logo.png']]
+    }
+    downloader.define_singleton_method(:fetch_snapshot_page) do |url, page_index, _http|
+      pages[[url, page_index]] || []
+    end
+    downloader.define_singleton_method(:num_snapshot_pages) { |_url, _http| 4 }
+
+    http = Object.new
+    def http.use_ssl=(_value); end
+    def http.open_timeout=(_value); end
+    def http.read_timeout=(_value); end
+    def http.start; end
+    def http.finish; end
+
+    Net::HTTP.stub(:new, http) do
+      files = downloader.get_file_list_curated
+      assert files.key?('about.html')
+      assert files.key?('style.css')
+      assert files.key?('logo.png')
+      assert_operator files.size, :>, 1
+    end
+  end
+
 end

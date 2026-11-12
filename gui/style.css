@@ -1,0 +1,155 @@
+/* GP Assistant palette: charcoal surfaces and a red accent. */
+
+window.wayback {
+  background-color: #0d1014;
+  color: #f4f7fa;
+}
+
+window.wayback headerbar {
+  background-color: #14191f;
+  color: #f4f7fa;
+  border-bottom: 1px solid #303943;
+  box-shadow: none;
+}
+
+window.wayback headerbar label {
+  color: #f4f7fa;
+}
+
+window.wayback headerbar windowcontrols button {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: #f4f7fa;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px;
+}
+
+window.wayback headerbar windowcontrols button:hover {
+  background-color: #303943;
+}
+
+window.wayback label {
+  color: #f4f7fa;
+}
+
+window.wayback label.dim-label {
+  color: #a9b4bf;
+  opacity: 1;
+}
+
+window.wayback label.heading {
+  color: #f4f7fa;
+  font-weight: 600;
+}
+
+window.wayback entry {
+  background-color: #1a2027;
+  background-image: none;
+  color: #f4f7fa;
+  caret-color: #f4f7fa;
+  border: 1px solid #303943;
+  border-radius: 8px;
+  box-shadow: none;
+  min-height: 28px;
+  padding: 6px 10px;
+}
+
+window.wayback entry placeholder {
+  color: #96a3b0;
+}
+
+window.wayback entry:focus {
+  border-color: #d83d35;
+  outline-color: rgba(216, 61, 53, 0.34);
+}
+
+window.wayback button {
+  background-color: #222a33;
+  background-image: none;
+  color: #f4f7fa;
+  border: 1px solid #303943;
+  border-radius: 8px;
+  box-shadow: none;
+  padding: 6px 14px;
+}
+
+window.wayback button:hover {
+  background-color: #303943;
+}
+
+window.wayback button.suggested-action {
+  background-color: #d83d35;
+  color: #ffffff;
+  border-color: #c6322c;
+}
+
+window.wayback button.suggested-action:hover {
+  background-color: #c6322c;
+}
+
+window.wayback button.destructive-action {
+  background-color: #a92924;
+  color: #ffffff;
+  border-color: #76201b;
+}
+
+window.wayback button.destructive-action:hover {
+  background-color: #8f221e;
+}
+
+window.wayback progressbar trough {
+  background-color: #222a33;
+  border: none;
+  border-radius: 999px;
+  min-height: 8px;
+}
+
+window.wayback progressbar progress {
+  background-color: #d83d35;
+  background-image: none;
+  border-radius: 999px;
+  min-height: 8px;
+}
+
+window.wayback progressbar text {
+  color: #a9b4bf;
+}
+
+window.wayback scrolledwindow {
+  background-color: #14191f;
+  border: 1px solid #303943;
+  border-radius: 10px;
+}
+
+window.wayback list,
+window.wayback list row {
+  background-color: #14191f;
+  background-image: none;
+  color: #f4f7fa;
+}
+
+window.wayback list row {
+  border-bottom: 1px solid #303943;
+}
+
+window.wayback list row:last-child {
+  border-bottom: none;
+}
+
+window.wayback textview,
+window.wayback textview text {
+  background-color: #14191f;
+  color: #f4f7fa;
+}
+
+window.wayback textview.log {
+  font-size: 12pt;
+}
+
+window.wayback selection {
+  background-color: #d83d35;
+  color: #ffffff;
+}

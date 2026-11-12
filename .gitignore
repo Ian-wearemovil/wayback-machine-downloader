@@ -27,3 +27,7 @@ tmp
 *.rbc
 
 test.rb
+
+## PYTHON
+__pycache__/
+*.pyc

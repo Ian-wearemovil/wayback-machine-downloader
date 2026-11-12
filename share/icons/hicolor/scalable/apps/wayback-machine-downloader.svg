@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Wayback Machine Downloader">
+  <rect width="128" height="128" rx="28" fill="#1f4b99"/>
+  <circle cx="64" cy="54" r="26" fill="none" stroke="#ffffff" stroke-width="8"/>
+  <path d="M64 40v16l12 8" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M64 86v22" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M48 100l16 12 16-12" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
