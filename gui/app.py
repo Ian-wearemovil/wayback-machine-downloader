@@ -35,6 +35,7 @@ _PROGRESS = re.compile(r"\((\d+)/(\d+)\)")
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, application):
         super().__init__(application=application, title="Wayback Machine Downloader")
+        self.add_css_class("wayback")
         self.set_default_size(720, 700)
         self._job = None
         self._pulse_id = 0
@@ -516,7 +517,8 @@ def _default_folder():
 
 def _install_css():
     provider = Gtk.CssProvider()
-    provider.load_from_data(b"textview.log { font-size: 12pt; }\n", -1)
+    css_path = Path(__file__).with_name("style.css")
+    provider.load_from_path(str(css_path))
     display = Gdk.Display.get_default()
     if display is not None:
         Gtk.StyleContext.add_provider_for_display(
